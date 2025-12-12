@@ -145,6 +145,13 @@ export const DEFAULT_ELEMENT_BACKGROUND_COLOR_PALETTE = {
   ...COMMON_ELEMENT_SHADES,
 } as const;
 
+export type RGBA = Readonly<{
+  r: number; // 0..1
+  g: number; // 0..1
+  b: number; // 0..1
+  a: number; // 0..1
+}>;
+
 // -----------------------------------------------------------------------------
 // helpers
 // -----------------------------------------------------------------------------
@@ -170,4 +177,36 @@ export const getAllColorsSpecificShade = (index: 0 | 1 | 2 | 3 | 4) =>
 export const rgbToHex = (r: number, g: number, b: number) =>
   `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 
+export const hexToRgb = (
+  color: string,
+): { r: number; g: number; b: number } => {
+  const c = color.trim();
+  if (c === "transparent") {
+    return { r: 0, g: 0, b: 0 };
+  }
+  if (c[0] === "#" && (c.length === 7 || c.length === 4)) {
+    if (c.length === 7) {
+      const r = Number.parseInt(c.slice(1, 3), 16);
+      const g = Number.parseInt(c.slice(3, 5), 16);
+      const b = Number.parseInt(c.slice(5, 7), 16);
+      return { r, g, b };
+    }
+    const r = Number.parseInt(c[1] + c[1], 16);
+    const g = Number.parseInt(c[2] + c[2], 16);
+    const b = Number.parseInt(c[3] + c[3], 16);
+    return { r, g, b };
+  }
+  // fallback: default to black
+  return { r: 0, g: 0, b: 0 };
+};
+
+export const hexToRgba = (strokeColor: string, opacityPct: number): RGBA => {
+  const { r, g, b } = hexToRgb(strokeColor);
+  return {
+    r: r / 255,
+    g: g / 255,
+    b: b / 255,
+    a: Math.max(0, Math.min(1, opacityPct / 100)),
+  };
+};
 // -----------------------------------------------------------------------------

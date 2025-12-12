@@ -1,5 +1,4 @@
 import rough from "roughjs/bin/rough";
-//import { getStroke } from "perfect-freehand";
 
 import {
   type GlobalPoint,
@@ -9,6 +8,8 @@ import {
   pointRotateRads,
   type Radians,
 } from "@excalidraw/math";
+
+import { strokeToSvgPathData } from "@excalidraw/stroke";
 
 import {
   BOUND_TEXT_PADDING,
@@ -64,7 +65,11 @@ import {
 import { getContainingFrame } from "./frame";
 import { getCornerRadius } from "./utils";
 import { ShapeCache } from "./shape";
-import { getStroke } from "./freedraw";
+import {
+  buildFreedrawStrokeRecord,
+  drawFreedrawStrokeToCanvas2D,
+  getStroke,
+} from "./freedraw";
 
 import type {
   ExcalidrawElement,
@@ -78,7 +83,6 @@ import type {
   ElementsMap,
 } from "./types";
 
-import type { StrokeOptions } from "perfect-freehand";
 import type { RoughCanvas } from "roughjs/bin/canvas";
 
 // using a stronger invert (100% vs our regular 93%) and saturate
@@ -437,17 +441,13 @@ const drawElementOnCanvas = (
     case "freedraw": {
       // Draw directly to canvas
       context.save();
-      context.fillStyle = element.strokeColor;
-
-      const path = getFreeDrawPath2D(element) as Path2D;
       const fillShape = ShapeCache.get(element);
 
       if (fillShape) {
         rc.draw(fillShape);
+      } else {
+        drawFreedrawStrokeToCanvas2D(element, context);
       }
-
-      context.fillStyle = element.strokeColor;
-      context.fill(path);
 
       context.restore();
       break;
@@ -1035,12 +1035,15 @@ export function generateFreeDrawShape(element: ExcalidrawFreeDrawElement) {
   return path;
 }
 
-export function getFreeDrawPath2D(element: ExcalidrawFreeDrawElement) {
-  return pathsCache.get(element);
-}
-
 export function getFreeDrawSvgPath(element: ExcalidrawFreeDrawElement) {
-  return getSvgPathFromStroke(getFreedrawOutlinePoints(element));
+  // For SVG export and hit-testing, we emit a union of capsule subpaths.
+  // This is derived from the same canonical primitive stream as raster.
+  const record = buildFreedrawStrokeRecord(element, {
+    dpr: 1,
+    coordSpace: "cssPx",
+  });
+
+  return strokeToSvgPathData(record);
 }
 
 export function getFreedrawOutlineAsSegments(
@@ -1108,56 +1111,15 @@ export function getFreedrawOutlinePoints(element: ExcalidrawFreeDrawElement) {
         : [[0, 0, 0.5]]) as [number, number, number][]);
 
   // Consider changing the options for simulated pressure vs real pressure
-  const options: StrokeOptions = {
+  const options = {
     simulatePressure: element.simulatePressure,
     size: element.strokeWidth * 4.25,
     thinning: 0.6,
     smoothing: 0.5,
     streamline: 0.5,
-    easing: (t) => Math.sin((t * Math.PI) / 2), // https://easings.net/#easeOutSine
+    easing: (t: number) => Math.sin((t * Math.PI) / 2), // https://easings.net/#easeOutSine
     last: true,
   };
 
-  // return getStroke(
-  //   [
-  //     [0, 0],
-  //     [30, -30],
-  //     [60, -30],
-  //   ],
-  //   options,
-  //   element,
-  // );
   return getStroke(inputPoints, options, element) as [number, number][];
-}
-
-function med(A: number[], B: number[]) {
-  return [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2];
-}
-
-// Trim SVG path data so number are each two decimal points. This
-// improves SVG exports, and prevents rendering errors on points
-// with long decimals.
-const TO_FIXED_PRECISION = /(\s?[A-Z]?,?-?[0-9]*\.[0-9]{0,2})(([0-9]|e|-)*)/g;
-
-function getSvgPathFromStroke(points: number[][]): string {
-  if (!points.length) {
-    return "";
-  }
-
-  const max = points.length - 1;
-
-  return points
-    .reduce(
-      (acc, point, i, arr) => {
-        if (i === max) {
-          acc.push(point, med(point, arr[0]), "L", arr[0], "Z");
-        } else {
-          acc.push(point, med(point, arr[i + 1]));
-        }
-        return acc;
-      },
-      ["M", points[0], "Q"],
-    )
-    .join(" ")
-    .replace(TO_FIXED_PRECISION, "$1");
 }

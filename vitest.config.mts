@@ -38,6 +38,14 @@ export default defineConfig({
         replacement: path.resolve(__dirname, "./packages/math/src/$1"),
       },
       {
+        find: /^@excalidraw\/stroke$/,
+        replacement: path.resolve(__dirname, "./packages/stroke/src/index.ts"),
+      },
+      {
+        find: /^@excalidraw\/stroke\/(.*?)/,
+        replacement: path.resolve(__dirname, "./packages/stroke/src/$1"),
+      },
+      {
         find: /^@excalidraw\/utils$/,
         replacement: path.resolve(__dirname, "./packages/utils/src/index.ts"),
       },

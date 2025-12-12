@@ -6326,7 +6326,7 @@ exports[`regression tests > draw every type of shape > [end of test] appState 1`
 
 exports[`regression tests > draw every type of shape > [end of test] number of elements 1`] = `0`;
 
-exports[`regression tests > draw every type of shape > [end of test] number of renders 1`] = `35`;
+exports[`regression tests > draw every type of shape > [end of test] number of renders 1`] = `36`;
 
 exports[`regression tests > draw every type of shape > [end of test] redo stack 1`] = `[]`;
 
@@ -9230,7 +9230,7 @@ exports[`regression tests > key 7 selects freedraw tool > [end of test] appState
 
 exports[`regression tests > key 7 selects freedraw tool > [end of test] number of elements 1`] = `0`;
 
-exports[`regression tests > key 7 selects freedraw tool > [end of test] number of renders 1`] = `6`;
+exports[`regression tests > key 7 selects freedraw tool > [end of test] number of renders 1`] = `7`;
 
 exports[`regression tests > key 7 selects freedraw tool > [end of test] redo stack 1`] = `[]`;
 
@@ -10255,7 +10255,7 @@ exports[`regression tests > key p selects freedraw tool > [end of test] appState
 
 exports[`regression tests > key p selects freedraw tool > [end of test] number of elements 1`] = `0`;
 
-exports[`regression tests > key p selects freedraw tool > [end of test] number of renders 1`] = `6`;
+exports[`regression tests > key p selects freedraw tool > [end of test] number of renders 1`] = `7`;
 
 exports[`regression tests > key p selects freedraw tool > [end of test] redo stack 1`] = `[]`;
 

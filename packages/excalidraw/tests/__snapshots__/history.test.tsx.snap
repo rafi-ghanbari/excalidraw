@@ -9171,7 +9171,7 @@ exports[`history > multiplayer undo/redo > should not let remote changes to inte
 
 exports[`history > multiplayer undo/redo > should not let remote changes to interfere with in progress freedraw > [end of test] number of elements 1`] = `2`;
 
-exports[`history > multiplayer undo/redo > should not let remote changes to interfere with in progress freedraw > [end of test] number of renders 1`] = `8`;
+exports[`history > multiplayer undo/redo > should not let remote changes to interfere with in progress freedraw > [end of test] number of renders 1`] = `10`;
 
 exports[`history > multiplayer undo/redo > should not let remote changes to interfere with in progress freedraw > [end of test] redo stack 1`] = `[]`;
 
@@ -12313,7 +12313,7 @@ exports[`history > singleplayer undo/redo > should create entry when selecting f
 
 exports[`history > singleplayer undo/redo > should create entry when selecting freedraw > [end of test] number of elements 1`] = `3`;
 
-exports[`history > singleplayer undo/redo > should create entry when selecting freedraw > [end of test] number of renders 1`] = `12`;
+exports[`history > singleplayer undo/redo > should create entry when selecting freedraw > [end of test] number of renders 1`] = `14`;
 
 exports[`history > singleplayer undo/redo > should create entry when selecting freedraw > [end of test] redo stack 1`] = `[]`;
 

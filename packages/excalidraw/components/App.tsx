@@ -9521,32 +9521,25 @@ class App extends React.Component<AppProps, AppState> {
           const points = newElement.points;
           const dx = pointerCoords.x - newElement.x;
           const dy = pointerCoords.y - newElement.y;
+          const pressures = newElement.simulatePressure
+            ? newElement.pressures
+            : [...newElement.pressures, event.pressure];
 
-          const lastPoint = points.length > 0 && points[points.length - 1];
-          const discardPoint =
-            lastPoint && lastPoint[0] === dx && lastPoint[1] === dy;
+          this.scene.mutateElement(
+            newElement,
+            {
+              points: [...points, pointFrom<LocalPoint>(dx, dy)],
+              pressures,
+            },
+            {
+              informMutation: true,
+              isDragging: false,
+            },
+          );
 
-          if (!discardPoint) {
-            const pressures = newElement.simulatePressure
-              ? newElement.pressures
-              : [...newElement.pressures, event.pressure];
-
-            this.scene.mutateElement(
-              newElement,
-              {
-                points: [...points, pointFrom<LocalPoint>(dx, dy)],
-                pressures,
-              },
-              {
-                informMutation: false,
-                isDragging: false,
-              },
-            );
-
-            this.setState({
-              newElement,
-            });
-          }
+          this.setState({
+            newElement,
+          });
         } else if (isLinearElement(newElement) && !newElement.isDeleted) {
           pointerDownState.drag.hasOccurred = true;
           const points = newElement.points;

@@ -453,12 +453,17 @@ export const isPathALoop = (
   zoomValue: Zoom["value"] = 1 as NormalizedZoomValue,
 ): boolean => {
   if (points.length >= 3) {
+    const hasExtent = points
+      .map(
+        (p) => pointDistance(points[0], p) > LINE_CONFIRM_THRESHOLD / zoomValue,
+      )
+      .some(Boolean);
     const [first, last] = [points[0], points[points.length - 1]];
     const distance = pointDistance(first, last);
 
     // Adjusting LINE_CONFIRM_THRESHOLD to current zoom so that when zoomed in
     // really close we make the threshold smaller, and vice versa.
-    return distance <= LINE_CONFIRM_THRESHOLD / zoomValue;
+    return distance <= LINE_CONFIRM_THRESHOLD / zoomValue && hasExtent;
   }
   return false;
 };

@@ -13,9 +13,18 @@ import {
   vectorNormalize,
   vectorScale,
 } from "@excalidraw/math";
-import { debugDrawLine } from "@excalidraw/common";
+import { debugDrawLine, hexToRgba } from "@excalidraw/common";
 
-import { type ExcalidrawFreeDrawElement } from "./types";
+import {
+  buildStrokeRecord,
+  type CoordSpace,
+  type RawSample,
+  type StrokeEngineConfig,
+  type StrokeRecord,
+  strokeToCanvasCompatible,
+} from "@excalidraw/stroke";
+
+import type { ExcalidrawFreeDrawElement } from "./types";
 
 const offset = (
   x: number,
@@ -193,11 +202,11 @@ export function getStroke(
     }
   }
 
-  debugSegments(
-    segments.filter((s): s is LineSegment<LocalPoint> => !!s),
-    input,
-    element,
-  );
+  // debugSegments(
+  //   segments.filter((s): s is LineSegment<LocalPoint> => !!s),
+  //   input,
+  //   element,
+  // );
 
   return [
     ...(segments[0] ? [segments[0][0]] : []),
@@ -253,3 +262,133 @@ function debugSegments(
     );
   });
 }
+
+type FreedrawStrokeBuildOptions = Readonly<{
+  dpr: number;
+  coordSpace: CoordSpace;
+  /** Feather fringe beyond radius, in device px. */
+  softnessPx?: number;
+  /** Smoothing coefficient in [0..1]. */
+  smoothing?: number;
+  /** If false, does not bake element.opacity into segment alpha (use context.globalAlpha instead). */
+  applyElementOpacity?: boolean;
+}>;
+
+export const buildFreedrawStrokeRecord = (
+  element: ExcalidrawFreeDrawElement,
+  opts: FreedrawStrokeBuildOptions,
+): StrokeRecord => {
+  const applyElementOpacity = opts.applyElementOpacity ?? true;
+
+  const samples: RawSample[] = [];
+
+  const points = element.points;
+  const pressures = element.pressures;
+
+  for (let i = 0; i < points.length; i++) {
+    const p = element.simulatePressure ? 1 : pressures[i] ?? 0.5;
+    samples.push({
+      x: points[i][0],
+      y: points[i][1],
+      t: i,
+      p: Math.max(0.0001, p),
+    });
+  }
+
+  if (!samples.length) {
+    samples.push({ x: 0, y: 0, t: 0, p: 0.5 });
+  }
+
+  const cfg: StrokeEngineConfig = {
+    inputCoordSpace: opts.coordSpace,
+    dpr: opts.dpr,
+    sizeCssPx: element.strokeWidth * 4.25,
+    minPressure: element.simulatePressure ? 1 : 0.08,
+    softnessPx: opts.softnessPx ?? 1,
+    smoothing: opts.smoothing ?? 0.25,
+    color: hexToRgba(
+      element.strokeColor,
+      applyElementOpacity ? element.opacity : 100,
+    ),
+  };
+
+  return buildStrokeRecord(samples, cfg);
+};
+
+/**
+ * Draws a high-fidelity stroke into an existing 2D context.
+ * The context transform may include rotation/scale.
+ */
+export const drawFreedrawStrokeToCanvas2D = (
+  element: ExcalidrawFreeDrawElement,
+  context: CanvasRenderingContext2D,
+): void => {
+  const t = context.getTransform();
+  const scaleX = Math.hypot(t.a, t.b);
+  const scaleY = Math.hypot(t.c, t.d);
+  const dpr = Math.max(scaleX, scaleY);
+
+  const record = buildFreedrawStrokeRecord(element, {
+    dpr,
+    coordSpace: "cssPx",
+    applyElementOpacity: false,
+  });
+
+  debugSegments(
+    record.segments.map((s) => [s.a, s.b] as LineSegment<LocalPoint>),
+    [], //element.points,
+    element,
+  );
+
+  const result = strokeToCanvasCompatible(record);
+
+  const bounds = result.bounds;
+
+  const dstX = bounds.xMin / dpr;
+  const dstY = bounds.yMin / dpr;
+  const dstW = bounds.width / dpr;
+  const dstH = bounds.height / dpr;
+
+  if (!result.image || dstW <= 0 || dstH <= 0) {
+    return;
+  }
+
+  if (result.image.kind === "offscreenCanvas") {
+    context.drawImage(result.image.canvas, dstX, dstY, dstW, dstH);
+    return;
+  }
+
+  const imgData =
+    result.image.kind === "imageData"
+      ? result.image.imageData
+      : typeof ImageData !== "undefined"
+      ? new ImageData(
+          result.image.buffer.data as unknown as ImageDataArray,
+          result.image.buffer.width,
+          result.image.buffer.height,
+        )
+      : null;
+
+  if (!imgData) {
+    return;
+  }
+
+  // ImageData: put into offscreen and drawImage so transforms apply.
+  if (typeof OffscreenCanvas !== "undefined") {
+    const c = new OffscreenCanvas(bounds.width, bounds.height);
+    const ctx = c.getContext("2d");
+    if (ctx) {
+      ctx.putImageData(imgData, 0, 0);
+      context.drawImage(c, dstX, dstY, dstW, dstH);
+      return;
+    }
+  }
+
+  // Fallback (no OffscreenCanvas): putImageData ignores transforms.
+  // This path is only used on older platforms.
+  context.putImageData(
+    imgData,
+    Math.round(bounds.xMin),
+    Math.round(bounds.yMin),
+  );
+};
